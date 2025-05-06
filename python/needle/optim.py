@@ -25,7 +25,21 @@ class SGD(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for param in self.params:
+            if param.grad is None:
+                continue
+
+            grad = (param.grad.data + self.weight_decay * param.data).detach()
+
+            if self.momentum > 0:
+                if param not in self.u:
+                    self.u[param] = ndl.zeros_like(param.data)
+                self.u[param] = self.momentum * self.u[param] + (1 - self.momentum) * grad
+                update = self.u[param]
+            else:
+                update = grad
+
+            param.data -= ndl.Tensor(self.lr * update, dtype=param.data.dtype)
         ### END YOUR SOLUTION
 
     def clip_grad_norm(self, max_norm=0.25):
@@ -33,7 +47,18 @@ class SGD(Optimizer):
         Clips gradient norm of parameters.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        total_norm = 0.0
+
+        for param in self.params:
+            if param.grad is not None:
+                total_norm += (param.grad.data ** 2).sum()
+        
+        total_norm = total_norm ** 0.5
+
+        if total_norm > max_norm:
+            for param in self.params:
+                if param.grad is not None:
+                    param.grad.data *= max_norm / total_norm
         ### END YOUR SOLUTION
 
 
@@ -60,5 +85,22 @@ class Adam(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.t += 1
+
+        for param in self.params:
+            if param.grad is None:
+                continue
+
+            grad = param.grad.data + self.weight_decay * param.data
+
+            if param not in self.m:
+                self.m[param] = ndl.zeros_like(param.data)
+                self.v[param] = ndl.zeros_like(param.data)
+            self.m[param] = self.beta1 * self.m[param] + (1 - self.beta1) * grad
+            self.v[param] = self.beta2 * self.v[param] + (1 - self.beta2) * (grad ** 2)
+            m_hat = self.m[param] / (1 - (self.beta1 ** self.t))
+            v_hat = self.v[param] / (1 - (self.beta2 ** self.t))
+            param.data -= ndl.Tensor(self.lr * m_hat / (v_hat ** 0.5 + self.eps), dtype=param.data.dtype)
+            
+
         ### END YOUR SOLUTION
